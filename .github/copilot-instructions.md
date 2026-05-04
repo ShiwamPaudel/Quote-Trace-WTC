@@ -1,0 +1,4 @@
+- Use this workspace to develop and refine the Next.js + Supabase quotation tracker.
+- The project should remain a single app in the current root folder.
+- Avoid adding unrelated frameworks or dependencies.
+- Keep UI minimal, responsive, and brand-aligned.
