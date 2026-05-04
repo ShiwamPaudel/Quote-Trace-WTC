@@ -20,7 +20,6 @@ export default function HomePage() {
             .select('role')
             .eq('id', user.id)
             .single();
-          console.log('ROOT PROFILE:', profile, profileError);
           if (profile?.role === 'admin') {
             router.replace('/admin-dashboard');
           } else {

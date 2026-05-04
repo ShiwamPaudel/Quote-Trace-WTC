@@ -4,8 +4,13 @@ import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 
 export const metadata: Metadata = {
-  title: 'Quotation Tracker',
-  description: 'Minimal quotation tracking dashboard with Supabase and Next.js',
+  title: 'Quote Trace',
+  description: 'Quotation tracking dashboard for WTC Nepal',
+  icons: {
+    icon: '/favicon.ico',
+    shortcut: '/favicon.ico',
+    apple: '/assets/quote-trace-logo.png',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
