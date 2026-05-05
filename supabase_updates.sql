@@ -34,6 +34,23 @@ create table if not exists public.quotations (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.followup_email_logs (
+  id uuid primary key default gen_random_uuid(),
+  quotation_id uuid not null references public.quotations(id) on delete cascade,
+  user_id uuid references auth.users(id) on delete set null,
+  follow_up_number integer not null,
+  due_on date not null,
+  recipient_email text not null,
+  provider_message_id text,
+  status text not null default 'queued',
+  attempt_count integer not null default 0,
+  error text,
+  sent_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint followup_email_logs_status_check check (status in ('queued', 'sending', 'sent', 'failed'))
+);
+
 alter table public.profiles
   add column if not exists email text,
   add column if not exists role text not null default 'user',
@@ -62,9 +79,45 @@ alter table public.quotations
 
 alter table public.quotations alter column user_id set default auth.uid();
 
+alter table public.followup_email_logs
+  add column if not exists quotation_id uuid references public.quotations(id) on delete cascade,
+  add column if not exists user_id uuid references auth.users(id) on delete set null,
+  add column if not exists follow_up_number integer not null default 1,
+  add column if not exists due_on date not null default current_date,
+  add column if not exists recipient_email text,
+  add column if not exists provider_message_id text,
+  add column if not exists status text not null default 'queued',
+  add column if not exists attempt_count integer not null default 0,
+  add column if not exists error text,
+  add column if not exists sent_at timestamptz,
+  add column if not exists created_at timestamptz not null default now(),
+  add column if not exists updated_at timestamptz not null default now();
+
+alter table public.followup_email_logs alter column recipient_email set not null;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'followup_email_logs_unique_reminder'
+      and conrelid = 'public.followup_email_logs'::regclass
+  ) then
+    alter table public.followup_email_logs
+      add constraint followup_email_logs_unique_reminder
+      unique (quotation_id, follow_up_number, recipient_email);
+  end if;
+end $$;
+
+create index if not exists followup_email_logs_quotation_idx
+on public.followup_email_logs (quotation_id, follow_up_number);
+
+create index if not exists followup_email_logs_status_idx
+on public.followup_email_logs (status);
+
 alter table public.profiles enable row level security;
 alter table public.customers enable row level security;
 alter table public.quotations enable row level security;
+alter table public.followup_email_logs enable row level security;
 
 do $$
 declare

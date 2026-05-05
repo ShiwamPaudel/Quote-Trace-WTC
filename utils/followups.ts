@@ -1,6 +1,8 @@
 import { STATUS_LABELS } from './status';
 
-const FOLLOW_UP_STATUSES = new Set(['sent', 'awaiting_poi', 'delivery_pending']);
+export const PENDING_FOLLOW_UP_STATUSES = ['sent', 'awaiting_poi', 'delivery_pending'] as const;
+
+const FOLLOW_UP_STATUSES = new Set<string>(PENDING_FOLLOW_UP_STATUSES);
 
 export interface FollowUpInfo {
   due: boolean;
