@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { QuotationForm } from '@/components/QuotationForm';
 import { FilterBar } from '@/components/FilterBar';
+import { QuotationTypePill, getQuotationTypeRowClass } from '@/components/QuotationTypePill';
 import { STATUS_LABELS, TYPE_LABELS, STATUS_OPTIONS, TYPE_OPTIONS } from '@/utils/status';
 import { formatNrs } from '@/utils/money';
 
@@ -32,6 +33,10 @@ interface QuotationRecord {
   customer: { name: string } | null;
 }
 
+type SortMode = 'date_desc' | 'state_asc' | 'state_desc';
+
+const getStateLabel = (quote: QuotationRecord) => STATUS_LABELS[quote.status] ?? quote.status;
+
 export default function QuotationsPage() {
   const router = useRouter();
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -48,6 +53,7 @@ export default function QuotationsPage() {
   const [filterType, setFilterType] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
+  const [sortMode, setSortMode] = useState<SortMode>('date_desc');
 
   useEffect(() => {
     const load = async () => {
@@ -103,7 +109,7 @@ export default function QuotationsPage() {
 
   const filtered = useMemo(() => {
     return quotations.filter((quote) => {
-      const matchesSearch = [quote.customer?.name, quote.user_name, quote.quotation_type, quote.status].some((value) =>
+      const matchesSearch = [quote.customer?.name, quote.user_name, TYPE_LABELS[quote.quotation_type], STATUS_LABELS[quote.status]].some((value) =>
         value?.toLowerCase().includes(search.toLowerCase())
       );
       const matchesStatus = filterStatus ? quote.status === filterStatus : true;
@@ -111,8 +117,17 @@ export default function QuotationsPage() {
       const matchesFrom = fromDate ? quote.quotation_date >= fromDate : true;
       const matchesTo = toDate ? quote.quotation_date <= toDate : true;
       return matchesSearch && matchesStatus && matchesType && matchesFrom && matchesTo;
+    }).sort((a, b) => {
+      if (sortMode === 'state_asc' || sortMode === 'state_desc') {
+        const stateCompare = getStateLabel(a).localeCompare(getStateLabel(b));
+        if (stateCompare !== 0) {
+          return sortMode === 'state_asc' ? stateCompare : -stateCompare;
+        }
+      }
+
+      return b.quotation_date.localeCompare(a.quotation_date);
     });
-  }, [quotations, search, filterStatus, filterType, fromDate, toDate]);
+  }, [quotations, search, filterStatus, filterType, fromDate, toDate, sortMode]);
 
   const handleExport = () => {
       const rows = filtered.map((quote) => ({
@@ -195,8 +210,8 @@ export default function QuotationsPage() {
         )}
 
         <Card>
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div className="grid gap-3 md:grid-cols-3 lg:min-w-[520px]">
+          <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(190px,1.15fr)_repeat(3,minmax(150px,1fr))]">
               <Input placeholder="Search customer, type, or status" value={search} onChange={(event) => setSearch(event.target.value)} />
               <Select value={filterStatus} onChange={(event) => setFilterStatus(event.target.value)}>
                 <option value="">All statuses</option>
@@ -213,6 +228,11 @@ export default function QuotationsPage() {
                     {option.label}
                   </option>
                 ))}
+              </Select>
+              <Select value={sortMode} onChange={(event) => setSortMode(event.target.value as SortMode)}>
+                <option value="date_desc">Newest first</option>
+                <option value="state_asc">State A-Z</option>
+                <option value="state_desc">State Z-A</option>
               </Select>
             </div>
             <FilterBar
@@ -246,12 +266,12 @@ export default function QuotationsPage() {
               </thead>
               <tbody className="divide-y divide-slate-200">
                 {filtered.map((quote) => (
-                  <tr key={quote.id} className="hover:bg-slate-50">
+                  <tr key={quote.id} className={getQuotationTypeRowClass(quote.quotation_type)}>
                     <td className="px-4 py-4">{quote.customer?.name ?? 'Unknown'}</td>
                     <td className="px-4 py-4">{quote.user_name}</td>
                     <td className="px-4 py-4">{quote.contact_person || '-'}</td>
                     <td className="px-4 py-4">{quote.designation || '-'}</td>
-                    <td className="px-4 py-4">{TYPE_LABELS[quote.quotation_type]}</td>
+                    <td className="px-4 py-4"><QuotationTypePill type={quote.quotation_type} /></td>
                     <td className="px-4 py-4">
                       <select
                         value={quote.status}

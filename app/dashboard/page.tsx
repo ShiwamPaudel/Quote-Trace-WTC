@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { Card } from '@/components/ui/Card';
 import { StatusPill } from '@/components/StatusPill';
+import { QuotationTypePill, getQuotationTypeRowClass } from '@/components/QuotationTypePill';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { STATUS_LABELS, TYPE_LABELS } from '@/utils/status';
+import { STATUS_LABELS } from '@/utils/status';
 import { getFollowUpInfo } from '@/utils/followups';
 import { formatNrs } from '@/utils/money';
 import { Plus } from 'lucide-react';
@@ -345,9 +346,9 @@ export default function DashboardPage() {
               </thead>
               <tbody className="divide-y divide-slate-200">
               {filteredQuotations.slice(0, 8).map((quote) => (
-                <tr key={quote.id} className="hover:bg-slate-50">
+                <tr key={quote.id} className={getQuotationTypeRowClass(quote.quotation_type)}>
                   <td className="px-4 py-4">{quote.customer?.name ?? 'Unknown'}</td>
-                  <td className="px-4 py-4">{TYPE_LABELS[quote.quotation_type] ?? quote.quotation_type}</td>
+                  <td className="px-4 py-4"><QuotationTypePill type={quote.quotation_type} /></td>
                   <td className="px-4 py-4"><StatusPill status={quote.status} /></td>
                   <td className="px-4 py-4">{formatNrs(Number(quote.quote_amount || 0))}</td>
                   <td className="px-4 py-4">{quote.quotation_date.slice(0, 10)}</td>

@@ -20,6 +20,7 @@ import {
 import { supabase } from '@/lib/supabaseClient';
 import { Card } from '@/components/ui/Card';
 import { StatusPill } from '@/components/StatusPill';
+import { QuotationTypePill, getQuotationTypeRowClass } from '@/components/QuotationTypePill';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
@@ -54,6 +55,19 @@ const statusPalette: Record<string, string> = {
 };
 
 const senderPalette = ['#0000CC', '#0f766e', '#f97316', '#7c3aed', '#dc2626'];
+
+const typeInsightStyles: Record<string, { panel: string; bar: string; text: string }> = {
+  service: {
+    panel: 'border-sky-200 bg-sky-50/70',
+    bar: 'bg-sky-500',
+    text: 'text-sky-700',
+  },
+  sales: {
+    panel: 'border-emerald-200 bg-emerald-50/70',
+    bar: 'bg-emerald-500',
+    text: 'text-emerald-700',
+  },
+};
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -192,6 +206,25 @@ export default function AdminDashboardPage() {
       .map((item, index) => ({ ...item, fill: senderPalette[index % senderPalette.length] }));
   }, [filteredQuotations]);
 
+  const typeInsights = useMemo(() => {
+    const summary = {
+      service: { type: 'service', label: TYPE_LABELS.service, count: 0, value: 0 },
+      sales: { type: 'sales', label: TYPE_LABELS.sales, count: 0, value: 0 },
+    };
+
+    filteredQuotations.forEach((quote) => {
+      const type = quote.quotation_type === 'sales' ? 'sales' : 'service';
+      summary[type].count += 1;
+      summary[type].value += Number(quote.quote_amount || 0);
+    });
+
+    const totalCount = summary.service.count + summary.sales.count;
+    return Object.values(summary).map((item) => ({
+      ...item,
+      share: totalCount ? Math.round((item.count / totalCount) * 100) : 0,
+    }));
+  }, [filteredQuotations]);
+
   const followUps = useMemo(
     () =>
       filteredQuotations
@@ -281,6 +314,43 @@ export default function AdminDashboardPage() {
             <p className="mt-3 text-3xl font-semibold text-slate-900">{formatNrs(totals.value)}</p>
           </Card>
         </div>
+
+        <Card className="overflow-hidden p-0">
+          <div className="grid md:grid-cols-[0.85fr_1.4fr]">
+            <div className="border-b border-slate-200 p-6 md:border-b-0 md:border-r">
+              <p className="text-sm uppercase tracking-[0.24em] text-secondary">Quote type mix</p>
+              <h2 className="mt-3 text-2xl font-semibold text-slate-900">Sales vs Service</h2>
+              <p className="mt-2 text-sm text-slate-500">Counts, value, and share for the selected admin filters.</p>
+            </div>
+            <div className="grid gap-4 p-4 md:grid-cols-2">
+              {typeInsights.map((item) => {
+                const styles = typeInsightStyles[item.type];
+
+                return (
+                  <div key={item.type} className={`rounded-2xl border p-5 ${styles.panel}`}>
+                    <div className="flex items-center justify-between gap-3">
+                      <QuotationTypePill type={item.type} />
+                      <span className={`text-sm font-semibold ${styles.text}`}>{item.share}%</span>
+                    </div>
+                    <div className="mt-5 grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Quotes</p>
+                        <p className="mt-1 text-3xl font-semibold text-slate-950">{item.count}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Value</p>
+                        <p className="mt-1 text-lg font-semibold text-slate-950">{formatNrs(item.value)}</p>
+                      </div>
+                    </div>
+                    <div className="mt-5 h-2 overflow-hidden rounded-full bg-white/80">
+                      <div className={`h-full rounded-full ${styles.bar}`} style={{ width: `${item.share}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </Card>
 
         <div className="grid gap-6 xl:grid-cols-2">
           <Card className="h-[420px]">
@@ -378,10 +448,10 @@ export default function AdminDashboardPage() {
               </thead>
               <tbody className="divide-y divide-slate-200">
                 {filteredQuotations.slice(0, 8).map((quote) => (
-                  <tr key={quote.id} className="hover:bg-slate-50">
+                  <tr key={quote.id} className={getQuotationTypeRowClass(quote.quotation_type)}>
                     <td className="px-4 py-4">{quote.customer?.name ?? 'Unknown'}</td>
                     <td className="px-4 py-4">{quote.user_name}</td>
-                    <td className="px-4 py-4">{TYPE_LABELS[quote.quotation_type] ?? quote.quotation_type}</td>
+                    <td className="px-4 py-4"><QuotationTypePill type={quote.quotation_type} /></td>
                     <td className="px-4 py-4"><StatusPill status={quote.status} /></td>
                     <td className="px-4 py-4">{formatNrs(Number(quote.quote_amount || 0))}</td>
                     <td className="px-4 py-4">{quote.quotation_date.slice(0, 10)}</td>

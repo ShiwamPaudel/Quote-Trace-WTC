@@ -15,8 +15,8 @@ export const STATUS_CLASSES: Record<string, string> = {
 };
 
 export const TYPE_LABELS: Record<string, string> = {
-  service: 'Service',
-  sales: 'Sales',
+  service: 'Service Quotation',
+  sales: 'Sales Quotation',
 };
 
 export const STATUS_OPTIONS = [
@@ -28,6 +28,6 @@ export const STATUS_OPTIONS = [
 ];
 
 export const TYPE_OPTIONS = [
-  { value: 'service', label: 'Service' },
-  { value: 'sales', label: 'Sales' },
+  { value: 'service', label: TYPE_LABELS.service },
+  { value: 'sales', label: TYPE_LABELS.sales },
 ];

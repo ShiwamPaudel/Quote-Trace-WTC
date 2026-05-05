@@ -19,26 +19,26 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   const hasFilters = Boolean(fromDate || toDate);
 
   return (
-    <div className="flex flex-wrap items-end gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
-      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-500">
+    <div className="flex w-full flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50/80 p-2 sm:w-auto">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-slate-500 shadow-sm">
         <CalendarDays size={18} />
       </div>
-      <label className="flex min-w-[145px] flex-col gap-1 text-xs font-medium text-slate-500">
-        From
+      <label className="flex h-10 min-w-[160px] flex-1 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-500 shadow-sm transition focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/15 sm:flex-none">
+        <span className="shrink-0">From</span>
         <input
           type="date"
           value={fromDate}
           onChange={(e) => onFromDateChange(e.target.value)}
-          className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900 outline-none transition focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/15"
+          className="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm font-medium text-slate-900 outline-none"
         />
       </label>
-      <label className="flex min-w-[145px] flex-col gap-1 text-xs font-medium text-slate-500">
-        To
+      <label className="flex h-10 min-w-[160px] flex-1 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-500 shadow-sm transition focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/15 sm:flex-none">
+        <span className="shrink-0">To</span>
         <input
           type="date"
           value={toDate}
           onChange={(e) => onToDateChange(e.target.value)}
-          className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900 outline-none transition focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/15"
+          className="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm font-medium text-slate-900 outline-none"
         />
       </label>
       {hasFilters && (
@@ -48,7 +48,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             onFromDateChange('');
             onToDateChange('');
           }}
-          className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-slate-900"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:bg-slate-50 hover:text-slate-900"
           aria-label="Clear date filters"
         >
           <X size={16} />
