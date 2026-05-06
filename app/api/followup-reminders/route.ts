@@ -106,6 +106,61 @@ const escapeHtml = (value: string) =>
 const getLogKey = (quotationId: string, followUpNumber: number, recipientEmail: string) =>
   `${quotationId}:${followUpNumber}:${recipientEmail.toLowerCase()}`;
 
+const getProfileEmail = (profile: ProfileRow | null | undefined) => profile?.email?.trim() || '';
+
+const getAuthEmailsByUserId = async (
+  supabase: ReturnType<typeof createSupabaseAdminClient>,
+  userIds: string[],
+  profilesById: Map<string, ProfileRow>
+) => {
+  const missingProfileEmailIds = userIds.filter((userId) => !getProfileEmail(profilesById.get(userId)));
+
+  const entries = await Promise.all(
+    missingProfileEmailIds.map(async (userId) => {
+      const { data, error } = await supabase.auth.admin.getUserById(userId);
+      if (error) return null;
+
+      const email = data.user?.email?.trim();
+      return email ? ([userId, email] as const) : null;
+    })
+  );
+
+  return new Map(entries.filter((entry): entry is readonly [string, string] => Boolean(entry)));
+};
+
+const resolveRecipient = (
+  userId: string | null,
+  profilesById: Map<string, ProfileRow>,
+  authEmailsByUserId: Map<string, string>
+) => {
+  if (!userId) {
+    return {
+      profile: null,
+      email: '',
+      emailSource: null,
+    };
+  }
+
+  const profile = profilesById.get(userId) ?? null;
+  const profileEmail = getProfileEmail(profile);
+  const authEmail = authEmailsByUserId.get(userId)?.trim() || '';
+  const email = profileEmail || authEmail;
+
+  if (!email) {
+    return {
+      profile,
+      email: '',
+      emailSource: null,
+    };
+  }
+
+  return {
+    profile: profile ? { ...profile, email } : { id: userId, name: null, email },
+    email,
+    emailSource: profileEmail ? 'profile' : 'auth',
+  };
+};
+
 const buildEmail = (candidate: FollowUpCandidate, profile: ProfileRow) => {
   const recipientName = profile.name?.trim() || profile.email?.split('@')[0] || 'there';
   const customerName = normalizeCustomer(candidate.quote.customer);
@@ -321,6 +376,7 @@ export async function GET(request: NextRequest) {
   }
 
   const profilesById = new Map((profiles ?? []).map((profile) => [profile.id, profile as ProfileRow]));
+  const authEmailsByUserId = await getAuthEmailsByUserId(supabase, userIds, profilesById);
   const quotationIds = Array.from(new Set(candidates.map((candidate) => candidate.quote.id)));
   const { data: existingLogs, error: logsError } = await supabase
     .from('followup_email_logs')
@@ -340,8 +396,11 @@ export async function GET(request: NextRequest) {
 
   if (dryRun) {
     const evaluated = candidates.map((candidate) => {
-      const profile = candidate.quote.user_id ? profilesById.get(candidate.quote.user_id) : null;
-      const recipientEmail = profile?.email?.trim();
+      const { profile, email: recipientEmail, emailSource } = resolveRecipient(
+        candidate.quote.user_id,
+        profilesById,
+        authEmailsByUserId
+      );
       const logKey = recipientEmail ? getLogKey(candidate.quote.id, candidate.followUpNumber, recipientEmail) : '';
       const existingLog = logKey ? logsByKey.get(logKey) : null;
       const email = profile ? buildEmail(candidate, profile) : null;
@@ -355,6 +414,7 @@ export async function GET(request: NextRequest) {
         status: candidate.quote.status,
         hasProfile: Boolean(profile),
         hasRecipientEmail: Boolean(recipientEmail),
+        recipientEmailSource: emailSource,
         alreadyLogged: Boolean(existingLog && ['queued', 'sending', 'sent'].includes(existingLog.status)),
         previousFailure: existingLog?.status === 'failed',
         subject: email?.subject ?? null,
@@ -379,8 +439,11 @@ export async function GET(request: NextRequest) {
   let failed = 0;
 
   for (const candidate of candidates) {
-    const profile = candidate.quote.user_id ? profilesById.get(candidate.quote.user_id) : null;
-    const recipientEmail = profile?.email?.trim();
+    const { profile, email: recipientEmail } = resolveRecipient(
+      candidate.quote.user_id,
+      profilesById,
+      authEmailsByUserId
+    );
 
     if (!profile || !recipientEmail) {
       skipped += 1;
